@@ -1,0 +1,45 @@
+version: '3.8'
+
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: digikool-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  gateway:
+    build: .
+    container_name: digikool-gateway
+    ports:
+      - "8080:8080"
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - INTROSPECTION_URI=${INTROSPECTION_URI:-http://localhost:9000/oauth2/introspect}
+      - INTROSPECTION_CLIENT_ID=${INTROSPECTION_CLIENT_ID:-school-app-client}
+      - INTROSPECTION_CLIENT_SECRET=${INTROSPECTION_CLIENT_SECRET:-secret}
+      - AUTH_URI=${AUTH_URI:-http://localhost:9000}
+      - SCHOOL_URI=${SCHOOL_URI:-http://localhost:8082}
+      - STUDENT_URI=${STUDENT_URI:-http://localhost:8083}
+      - TEACHER_URI=${TEACHER_URI:-http://localhost:8084}
+      - COURSE_URI=${COURSE_URI:-http://localhost:8085}
+      - NOTIFICATION_URI=${NOTIFICATION_URI:-http://localhost:8086}
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  redis_data:
