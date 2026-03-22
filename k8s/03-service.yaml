@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: digikool-gateway-svc
+  namespace: gateway
+spec:
+  selector:
+    app: digikool-gateway
+  ports:
+    - port: 80
+      targetPort: 6061
+      protocol: TCP
+  type: ClusterIP

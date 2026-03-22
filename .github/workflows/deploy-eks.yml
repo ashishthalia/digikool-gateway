@@ -1,0 +1,58 @@
+name: Build and Deploy to EKS
+
+on:
+  push:
+    branches: ["main"]
+  workflow_dispatch:
+
+env:
+  AWS_REGION: ap-south-1
+  ECR_REPOSITORY: digikool-gateway
+  EKS_CLUSTER_NAME: digikool-eks
+  K8S_NAMESPACE: gateway
+  DEPLOYMENT_NAME: digikool-gateway
+  CONTAINER_NAME: gateway
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ env.AWS_REGION }}
+          role-to-assume: arn:aws:iam::767397664515:role/github-actions-eks-deploy-role
+
+      - name: Login to Amazon ECR
+        id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push Docker image (amd64)
+        env:
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker buildx create --use --name builder || true
+          docker buildx build \
+            --platform linux/amd64 \
+            -t ${{ steps.ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${IMAGE_TAG} \
+            --push \
+            .
+
+      - name: Update kubeconfig
+        run: aws eks update-kubeconfig --region $AWS_REGION --name $EKS_CLUSTER_NAME
+
+      - name: Deploy new image
+        env:
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          kubectl set image deployment/${DEPLOYMENT_NAME} \
+            ${CONTAINER_NAME}=${{ steps.ecr.outputs.registry }}/${ECR_REPOSITORY}:${IMAGE_TAG} \
+            -n ${K8S_NAMESPACE}
+          kubectl rollout status deployment/${DEPLOYMENT_NAME} -n ${K8S_NAMESPACE}

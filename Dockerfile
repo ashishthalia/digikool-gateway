@@ -1,7 +1,7 @@
-FROM openjdk:21-jdk-slim
+FROM eclipse-temurin:21-jdk-jammy
 
 WORKDIR /app
-
+RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
 # Copy Maven wrapper and pom.xml
 COPY mvnw .
 COPY mvnw.cmd .
@@ -18,7 +18,7 @@ RUN ./mvnw dependency:go-offline -B
 COPY src src
 
 # Build the application
-RUN ./mvnw clean package -DskipTests
+RUN ./mvnw clean package -Dmaven.test.skip=true
 
 # Create non-root user
 RUN addgroup --system spring && adduser --system spring --ingroup spring
