@@ -2,6 +2,11 @@ server:
   port: ${PORT:6061}
   forward-headers-strategy: framework
   shutdown: graceful
+  reactive:
+    session:
+      timeout: 30m
+      cookie:
+        same-site: LAX
 
 spring:
   application:
@@ -28,6 +33,10 @@ spring:
           max-active: 8
           max-idle: 8
           min-idle: 0
+  session:
+    store-type: redis
+    redis:
+      namespace: gateway:session
 
   cloud:
     gateway:
@@ -88,11 +97,11 @@ spring:
             client-authentication-method: client_secret_basic
         provider:
           gateway-provider:
-            authorization-uri: http://localhost:9000/oauth2/authorize
-            token-uri: http://localhost:9000/oauth2/token
-            user-info-uri: http://localhost:9000/oauth2/userinfo
+            authorization-uri: ${AUTH_BASE_URL:https://auth.digikool.in}/oauth2/authorize
+            token-uri: ${AUTH_BASE_URL:https://auth.digikool.in}/oauth2/token
+            user-info-uri: ${AUTH_BASE_URL:https://auth.digikool.in}/oauth2/userinfo
             user-name-attribute: sub
-            jwk-set-uri: http://localhost:9000/oauth2/jwks
+            jwk-set-uri: ${AUTH_BASE_URL:https://auth.digikool.in}/oauth2/jwks
 
 logging:
   level:

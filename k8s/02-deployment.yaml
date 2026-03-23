@@ -23,9 +23,13 @@ spec:
             - name: PORT
               value: "6061"
             - name: AUTH_URI
-              value: "http://auth-service:9000"
+              value: "http://digikool-auth-svc.gateway.svc.cluster.local"
             - name: ATTENDANCE_URI
-              value: "http://attendance-service:8087"
+              value: "http://attendance-service.gateway.svc.cluster.local:8087"
+            - name: AUTH_BASE_URL
+              value: "https://auth.digikool.in"
+            - name: APP_FRONTEND_URL
+              value: "https://www.digikool.in"
             - name: REDIS_HOST
               value: "gateway-redis-master"
             - name: REDIS_PORT
