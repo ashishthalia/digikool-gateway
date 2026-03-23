@@ -2,6 +2,7 @@ package co.digikool.gateway.config;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.buffer.DataBuffer;
@@ -34,6 +35,8 @@ import java.util.Arrays;
 public class SecurityConfig {
 
     private static final Logger log = LoggerFactory.getLogger(SecurityConfig.class);
+    @Value("${app.frontend-url:https://www.digikool.in}")
+    private String frontendUrl;
 
     @Bean
     public SecurityWebFilterChain springSecurityFilterChain(ServerHttpSecurity http) {
@@ -165,7 +168,7 @@ public class SecurityConfig {
 
                         // ✅ Redirect to your Nuxt UI
                         exchange.getResponse().setStatusCode(HttpStatus.FOUND);
-                        exchange.getResponse().getHeaders().set("Location", "http://localhost:3000");
+                        exchange.getResponse().getHeaders().set("Location", frontendUrl);
                     }))
                     .then(exchange.getResponse().setComplete());
         };
@@ -192,6 +195,8 @@ public class SecurityConfig {
         CorsConfiguration corsConfig = new CorsConfiguration();
         corsConfig.setAllowedOrigins(Arrays.asList(
                 "http://localhost:3000",
+                "https://digikool.in",
+                "https://www.digikool.in",
                 "https://digikool.com",
                 "https://www.digikool.com"
         ));
