@@ -4,7 +4,7 @@ metadata:
   name: digikool-gateway
   namespace: gateway
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app: digikool-gateway
