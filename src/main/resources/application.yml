@@ -64,15 +64,16 @@ spring:
               predicates:
                 - Path=/auth/**
               filters:
+                - TokenRelay
                 - StripPrefix=1
             - id: attendance-service
-              uri: ${ATTENDANCE_URI:http://localhost:8087}
+              uri: ${ATTENDANCE_URI:http://attendance-service.gateway.svc.cluster.local:8087}
               predicates:
-                - Path=/api/sessions/**,/api/records/**
+                - Path=/api/attendance/**,/api/sessions/**,/api/records/**
               filters:
                 - StripPrefix=0
             - id: attendance-redirect
-              uri: ${ATTENDANCE_URI:http://localhost:8087}
+              uri: ${ATTENDANCE_URI:http://attendance-service.gateway.svc.cluster.local:8087}
               predicates:
                 - Path=/attendance/**
               filters:
@@ -92,11 +93,11 @@ spring:
             client-authentication-method: client_secret_basic
         provider:
           gateway-provider:
-            authorization-uri: ${AUTH_BASE_URL:https://auth.digikool.in}/oauth2/authorize
-            token-uri: ${AUTH_BASE_URL:https://auth.digikool.in}/oauth2/token
-            user-info-uri: ${AUTH_BASE_URL:https://auth.digikool.in}/oauth2/userinfo
+            authorization-uri: ${AUTH_BASE_URL:http://localhost:9000}/oauth2/authorize
+            token-uri: ${AUTH_BASE_URL:http://localhost:9000}/oauth2/token
+            user-info-uri: ${AUTH_BASE_URL:http://localhost:9000}/oauth2/userinfo
             user-name-attribute: sub
-            jwk-set-uri: ${AUTH_BASE_URL:https://auth.digikool.in}/oauth2/jwks
+            jwk-set-uri: ${AUTH_BASE_URL:http://localhost:9000}/oauth2/jwks
 
 logging:
   level:

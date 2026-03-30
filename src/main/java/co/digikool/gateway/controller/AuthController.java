@@ -2,22 +2,30 @@ package co.digikool.gateway.controller;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.server.reactive.ServerHttpResponse;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ServerWebExchange;
+import org.springframework.web.util.UriComponentsBuilder;
 import reactor.core.publisher.Mono;
 
+import java.net.URI;
 import java.time.Duration;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/oauth2")
 public class AuthController {
     
     private static final Logger logger = LoggerFactory.getLogger(AuthController.class);
+
+    @Value("${app.frontend-url:http://localhost:3000}")
+    private String frontendUrl;
+
+    @Value("${AUTH_BASE_URL:http://localhost:9000}")
+    private String authBaseUrl;
     
     /**
      * Authorization endpoint - initiates OAuth2 flow
@@ -36,41 +44,53 @@ public class AuthController {
         return response.setComplete();
     }
     
-    /**
-     * Logout endpoint that clears authentication cookies
-     */
+    @GetMapping("/logout")
+    public Mono<Void> logout(ServerWebExchange exchange,
+                             @RequestParam(name = "returnTo", required = false) String returnTo) {
+        return performLogout(exchange, returnTo);
+    }
+
     @PostMapping("/logout")
-    public Mono<String> logout(ServerHttpResponse response) {
+    public Mono<Void> logoutPost(ServerWebExchange exchange,
+                                 @RequestParam(name = "returnTo", required = false) String returnTo) {
+        return performLogout(exchange, returnTo);
+    }
+
+    private Mono<Void> performLogout(ServerWebExchange exchange, String returnTo) {
         logger.info("User logout requested");
-        
-        // Clear authentication cookies
-        response.addCookie(ResponseCookie.from("authenticated", "")
-                .httpOnly(false)
-                .secure(false)
-                .sameSite("Strict")
+        String redirectUrl = (returnTo != null && !returnTo.isBlank()) ? returnTo : frontendUrl + "/login";
+        String authLogoutUrl = UriComponentsBuilder.fromUriString(authBaseUrl)
+                .path("/logout")
+                .queryParam("continue", redirectUrl)
+                .build(true)
+                .toUriString();
+
+        boolean secureRequest = "https".equalsIgnoreCase(exchange.getRequest().getURI().getScheme());
+        ServerHttpResponse response = exchange.getResponse();
+
+        return exchange.getSession()
+                .flatMap(webSession -> webSession.invalidate().onErrorResume(ex -> Mono.empty()))
+                .then(Mono.fromRunnable(() -> {
+                    clearCookie(response, "SESSION", true, secureRequest);
+                    clearCookie(response, "JSESSIONID", true, secureRequest);
+                    clearCookie(response, "authenticated", false, secureRequest);
+                    clearCookie(response, "user_id", false, secureRequest);
+                    clearCookie(response, "username", false, secureRequest);
+
+                    response.setStatusCode(HttpStatus.FOUND);
+                    response.getHeaders().setLocation(URI.create(authLogoutUrl));
+                }))
+                .then(response.setComplete());
+    }
+
+    private void clearCookie(ServerHttpResponse response, String name, boolean httpOnly, boolean secure) {
+        response.addCookie(ResponseCookie.from(name, "")
+                .httpOnly(httpOnly)
+                .secure(secure)
+                .sameSite("Lax")
                 .maxAge(Duration.ZERO)
                 .path("/")
                 .build());
-                
-        response.addCookie(ResponseCookie.from("user_id", "")
-                .httpOnly(false)
-                .secure(false)
-                .sameSite("Strict")
-                .maxAge(Duration.ZERO)
-                .path("/")
-                .build());
-                
-        response.addCookie(ResponseCookie.from("username", "")
-                .httpOnly(false)
-                .secure(false)
-                .sameSite("Strict")
-                .maxAge(Duration.ZERO)
-                .path("/")
-                .build());
-        
-        logger.info("Authentication cookies cleared");
-        
-        return Mono.just("Successfully logged out");
     }
     
     /**
