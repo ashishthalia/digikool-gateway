@@ -19,7 +19,7 @@ spring:
     cache: false
 
   web-flux:
-    problem details:
+    problem-details:
       enabled: true
 
   data:
@@ -33,32 +33,44 @@ spring:
           max-active: 8
           max-idle: 8
           min-idle: 0
+
   cloud:
     gateway:
+
       default-filters:
         - DedupeResponseHeader=Access-Control-Allow-Credentials Access-Control-Allow-Origin
+
       server:
         webflux:
+
+          httpclient:
+            ssl:
+              use-insecure-trust-manager: true
           globalcors:
             cors-configurations:
               "[/**]":
-                allowed-origins: 
+                allowed-origins:
                   - "http://localhost:3000"
+                  - "https://localhost:3000"
                   - "https://digikool.in"
                   - "https://www.digikool.in"
                   - "https://digikool.com"
                   - "https://www.digikool.com"
-                allowed-methods: 
+
+                allowed-methods:
                   - GET
                   - POST
                   - PUT
                   - DELETE
                   - OPTIONS
                   - PATCH
+
                 allowed-headers: "*"
                 allow-credentials: true
                 max-age: 3600
+
           routes:
+
             - id: auth-service
               uri: ${AUTH_URI:http://localhost:9000}
               predicates:
@@ -66,18 +78,27 @@ spring:
               filters:
                 - TokenRelay
                 - StripPrefix=1
+
             - id: attendance-service
               uri: ${ATTENDANCE_URI:http://attendance-service.gateway.svc.cluster.local:8087}
               predicates:
                 - Path=/api/attendance/**,/api/sessions/**,/api/records/**
               filters:
                 - StripPrefix=0
+
             - id: attendance-redirect
               uri: ${ATTENDANCE_URI:http://attendance-service.gateway.svc.cluster.local:8087}
               predicates:
                 - Path=/attendance/**
               filters:
                 - StripPrefix=1
+
+            - id: payment-service
+              uri: https://localhost:8443
+              predicates:
+                - Path=/payment/**
+              filters:
+                - StripPrefix=0
 
   security:
     oauth2:
@@ -91,6 +112,7 @@ spring:
             redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
             provider: gateway-provider
             client-authentication-method: client_secret_basic
+
         provider:
           gateway-provider:
             authorization-uri: ${AUTH_BASE_URL:http://localhost:9000}/oauth2/authorize
@@ -107,14 +129,20 @@ logging:
     org.springframework.web.reactive.function.client: TRACE
     org.springframework.security.oauth2.client: TRACE
 
+    org.springframework.cloud.gateway: TRACE
+    reactor.netty.http.client: DEBUG
+
 management:
   endpoints:
     web:
       exposure:
         include: health,info,metrics,prometheus,loggers
+
   endpoint:
     health:
-      probes.enabled: true
+      probes:
+        enabled: true
+
   metrics:
     tags:
       application: ${spring.application.name}

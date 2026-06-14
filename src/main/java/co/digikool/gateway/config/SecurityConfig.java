@@ -35,7 +35,8 @@ import java.util.Arrays;
 public class SecurityConfig {
 
     private static final Logger log = LoggerFactory.getLogger(SecurityConfig.class);
-    @Value("${app.frontend-url:https://www.digikool.in}")
+    // @Value("${app.frontend-url:https://www.digikool.in}")
+        @Value("${app.frontend-url:http://localhost:3000}")
     private String frontendUrl;
 
     @Bean
@@ -52,6 +53,8 @@ public class SecurityConfig {
                         .pathMatchers("/user/me").permitAll()
                         // Allow /attendance/** paths - attendance service validates gateway headers
                         .pathMatchers("/attendance/**").permitAll()
+                        // Allow /payment/** paths - payment service validates gateway headers
+                        .pathMatchers("/payment/**").permitAll()
                         // Allow OPTIONS requests for CORS preflight (must be before authenticated check)
                         .pathMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
                         // Require authentication for /auth/** API calls (they go through gateway)
@@ -90,6 +93,7 @@ public class SecurityConfig {
                             // For API requests (attendance, api, auth/api, etc.), return 401 instead of redirecting
                             // CORS headers will be added by the global CORS configuration
                             if (path.startsWith("/attendance/") || 
+                                path.startsWith("/payment/") ||
                                 path.startsWith("/api/") || 
                                 path.startsWith("/auth/api/") ||
                                 path.startsWith("/user/") ||
